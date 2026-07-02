@@ -259,7 +259,7 @@ module appConfigStore 'modules/app-config-store.bicep' = {
     enablePrivateEndpoint: isAILZIntegrated
     privateEndpointSubnetId: isAILZIntegrated ? networkConfig.privateEndpointSubnetId : ''
     appConfigPrivateDnsZoneId: isAILZIntegrated ? networkConfig.privateDnsZoneIds.appConfig : ''
-    publicNetworkAccess: isAILZIntegrated ? 'Disabled' : 'Enabled'
+    publicNetworkAccess: 'Enabled'
     tags: tags
   }
 }
@@ -445,9 +445,9 @@ module containerRegistry 'modules/container-registry.bicep' = {
     location: location
     roleAssignedManagedIdentityPrincipalIds: [userAssignedIdentity.outputs.principalId]
     enablePrivateEndpoint: isAILZIntegrated
-    privateEndpointSubnetId: isAILZIntegrated ? networkConfig.privateEndpointsSubnetId : ''
+    privateEndpointSubnetId: isAILZIntegrated ? networkConfig.privateEndpointSubnetId : ''
     acrPrivateDnsZoneId: isAILZIntegrated ? networkConfig.privateDnsZoneIds.acr : ''
-    publicNetworkAccess: isAILZIntegrated ? 'Disabled' : 'Enabled'
+    publicNetworkAccess: 'Enabled'
     tags: tags
   }
 }
@@ -460,7 +460,7 @@ module containerAppsEnvironment 'modules/container-apps-environment.bicep' = {
   name: 'cae-la-${resourceToken}'
   params: {
     containerAppsEnvironmentName: containerAppsEnvironmentName
-    logAnalyticsWorkspaceId: !empty(existingLogAnalyticsWorkspaceId) ? existingLogAnalyticsWorkspaceId : logAnalytics!.outputs.logAnalyticsWorkspaceId
+    logAnalyticsWorkspaceId: !empty(existingLogAnalyticsWorkspaceId) ? reference(existingLogAnalyticsWorkspaceId, '2021-12-01-preview').customerId : logAnalytics!.outputs.logAnalyticsWorkspaceId
     logAnalyticsPrimarySharedKey: !empty(existingLogAnalyticsWorkspaceId) ? listKeys(existingLogAnalyticsWorkspaceId, '2021-12-01-preview').primarySharedKey : logAnalytics.outputs.primarySharedKey
     userAssignedResourceIds: [userAssignedIdentity.outputs.resourceId]
     location: location
