@@ -493,7 +493,7 @@ module apiContainerApp 'modules/container-app.bicep' = {
     containerRegistryServer: containerRegistry!.outputs.loginServer
     managedIdentityId: userAssignedIdentity.outputs.resourceId
     targetPort: 8090
-    externalIngress: !isAILZIntegrated
+    externalIngress: true
     corsEnabled: true
     livenessProbePath: '/'
     cpuCores: 2
@@ -528,7 +528,7 @@ module workerContainerApp 'modules/container-app.bicep' = {
     containerRegistryServer: containerRegistry!.outputs.loginServer
     managedIdentityId: userAssignedIdentity.outputs.resourceId
     targetPort: workerContainerAppTargetPort
-    externalIngress: !isAILZIntegrated
+    externalIngress: true
     corsEnabled: true
     livenessProbePath: '/'
     cpuCores: 2
@@ -563,7 +563,7 @@ module webContainerApp 'modules/container-app.bicep' = {
     containerRegistryServer: containerRegistry!.outputs.loginServer
     managedIdentityId: userAssignedIdentity.outputs.resourceId
     targetPort: 8080
-    externalIngress: !isAILZIntegrated
+    externalIngress: true
     corsEnabled: true
     livenessProbePath: '/'
     cpuCores: 1
