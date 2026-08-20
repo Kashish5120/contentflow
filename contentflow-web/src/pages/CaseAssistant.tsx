@@ -15,9 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import {
   Table,
@@ -36,9 +34,6 @@ import {
 type ProcessingStatus = "Idle" | "Queued" | "Running" | "Validating" | "Completed" | "Failed" | "Cancelled";
 type Recommendation = "Approve" | "Decline";
 type LicenseType = "new" | "renewal";
-
-const NEW_LICENSE_CONTAINER = "sql-fetch-data";
-const RENEWAL_LICENSE_CONTAINER = "farmacia-nueva-renewal";
 
 interface ValidationCheck {
   name: string;
@@ -189,14 +184,14 @@ function toCaseResult(response: SarspExecutionStatusResponse): CaseResult {
 export default function CaseAssistant() {
   const [caseId, setCaseId] = useState("");
   const [licenseType, setLicenseType] = useState<LicenseType>("renewal");
+  const [pharmacistFullName, setPharmacistFullName] = useState("");
+  const [legalEntityName, setLegalEntityName] = useState("");
   const [submittedCaseId, setSubmittedCaseId] = useState("");
   const [executionId, setExecutionId] = useState("");
   const [status, setStatus] = useState<ProcessingStatus>("Idle");
   const [statusMessage, setStatusMessage] = useState("No case submitted");
   const [result, setResult] = useState<CaseResult | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
-
-  const selectedContainer = licenseType === "new" ? NEW_LICENSE_CONTAINER : RENEWAL_LICENSE_CONTAINER;
 
   useEffect(() => {
     if (!submittedCaseId || !executionId || !activeStatuses.includes(status)) {
@@ -273,7 +268,9 @@ export default function CaseAssistant() {
     event.preventDefault();
 
     const normalizedCaseId = caseId.trim().toUpperCase();
-    if (!normalizedCaseId) {
+    const normalizedPharmacistFullName = pharmacistFullName.trim();
+    const normalizedLegalEntityName = legalEntityName.trim();
+    if (!normalizedCaseId || !normalizedPharmacistFullName || !normalizedLegalEntityName) {
       return;
     }
 
@@ -287,8 +284,9 @@ export default function CaseAssistant() {
     try {
       const response = await startSarspCaseValidation(normalizedCaseId, {
         configuration: {
-          case_container: selectedContainer,
           license_type: licenseType,
+          pharmacist_full_name: normalizedPharmacistFullName,
+          legal_entity_name: normalizedLegalEntityName,
         },
       });
       setExecutionId(response.execution_id);
@@ -355,40 +353,47 @@ export default function CaseAssistant() {
                   Submit
                 </Button>
               </div>
-
               <div className="space-y-2">
-                <p className="text-sm font-semibold text-slate-700">License Type</p>
-                <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="license-type-new"
-                      checked={licenseType === "new"}
-                      onCheckedChange={(checked) => {
-                        if (checked === true) {
-                          setLicenseType("new");
-                        }
-                      }}
-                    />
-                    <Label htmlFor="license-type-new" className="cursor-pointer text-sm text-slate-700">
-                      New license (container: {NEW_LICENSE_CONTAINER})
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="license-type-renewal"
-                      checked={licenseType === "renewal"}
-                      onCheckedChange={(checked) => {
-                        if (checked === true) {
-                          setLicenseType("renewal");
-                        }
-                      }}
-                    />
-                    <Label htmlFor="license-type-renewal" className="cursor-pointer text-sm text-slate-700">
-                      Renewal license (container: {RENEWAL_LICENSE_CONTAINER})
-                    </Label>
-                  </div>
-                </div>
+                <label htmlFor="license-type" className="text-sm font-semibold text-slate-700">
+                  License type
+                </label>
+                <select
+                  id="license-type"
+                  value={licenseType}
+                  onChange={(event) => setLicenseType(event.target.value as LicenseType)}
+                  className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-[#0f766e] focus:ring-2 focus:ring-[#0f766e]/20"
+                >
+                  <option value="new">New license</option>
+                  <option value="renewal">Renewal</option>
+                </select>
               </div>
+              <div className="space-y-2">
+                <label htmlFor="pharmacist-full-name" className="text-sm font-semibold text-slate-700">
+                  Pharmacist full name
+                </label>
+                <Input
+                  id="pharmacist-full-name"
+                  value={pharmacistFullName}
+                  onChange={(event) => setPharmacistFullName(event.target.value)}
+                  placeholder="First name and last name"
+                  className="h-11 rounded-md border-slate-300 bg-white"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="legal-entity-name" className="text-sm font-semibold text-slate-700">
+                  Legal entity or DBA
+                </label>
+                <Input
+                  id="legal-entity-name"
+                  value={legalEntityName}
+                  onChange={(event) => setLegalEntityName(event.target.value)}
+                  placeholder="Legal entity name or DBA"
+                  className="h-11 rounded-md border-slate-300 bg-white"
+                  required
+                />
+              </div>
+
             </form>
           </Card>
 

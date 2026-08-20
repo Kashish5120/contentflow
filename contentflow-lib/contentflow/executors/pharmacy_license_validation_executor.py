@@ -689,7 +689,6 @@ class PharmacyLicenseValidationExecutor(BaseExecutor):
         # Add image context for photo documents
         image_context = ""
         if doc_type == "Fotos 2x2 de Farmacéuticos":
-            filename = doc.get("filename", "")
             try:
                 pages = doc.get(
                     "details", {}
@@ -714,13 +713,38 @@ class PharmacyLicenseValidationExecutor(BaseExecutor):
                         "mimeType", ""
                     )
 
+                    headshot_verdict = self._get_headshot_verdict(doc)
+                    if headshot_verdict is None:
+                        subject_line = (
+                            "Automated image analysis was NOT available for this file, "
+                            "so it is UNVERIFIED whether the image actually depicts a "
+                            "person. Do NOT assume it is a headshot. Fail the rule "
+                            "unless the extracted content proves it is a headshot of a "
+                            "person."
+                        )
+                    else:
+                        is_headshot, subject_count = headshot_verdict
+                        if is_headshot:
+                            subject_line = (
+                                "Automated image analysis determined the image IS a "
+                                f"headshot of a person (human faces detected: {subject_count})."
+                            )
+                        else:
+                            subject_line = (
+                                "Automated image analysis determined the image is NOT a "
+                                "headshot of a person "
+                                f"(human faces detected: {subject_count}). "
+                                "The rule MUST fail: the submitted file is not a valid "
+                                "pharmacist photo."
+                            )
+
                     image_context = (
                         f"\nIMAGE METADATA: This is a {mime} image file "
                         f"({width}x{height} pixels). "
                         f"The file was classified as a pharmacist photo based on "
-                        f"file type (.jpg) and absence of document text content. "
-                        f"It IS a photo of a person (headshot). "
-                        f"Validate based on the pixel dimensions: a proper 2x2 inch "
+                        f"file type and absence of document text content. "
+                        f"{subject_line} "
+                        f"Also validate the pixel dimensions: a proper 2x2 inch "
                         f"photo at 300 DPI should be approximately 600x600 pixels. "
                         f"This image is {width}x{height} pixels.\n"
                     )
@@ -814,24 +838,34 @@ class PharmacyLicenseValidationExecutor(BaseExecutor):
     # Document type matching
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _get_headshot_verdict(doc: dict) -> Optional[tuple]:
+        """Return (is_headshot, subject_count) from HeadshotAnalyzer, or None if unavailable."""
+        headshot_data = doc.get("headshot_analysis") or {}
+        if not headshot_data:
+            return None
+        try:
+            contents = headshot_data.get("result", {}).get("contents", [])
+            if not contents:
+                return None
+            fields = contents[0].get("fields", {})
+            if "isHeadshot" not in fields:
+                return None
+            is_headshot = bool(fields.get("isHeadshot", {}).get("valueBoolean", False))
+            subject_count = fields.get("subjectCount", {}).get("valueNumber", 0)
+            return is_headshot, subject_count
+        except (KeyError, IndexError, TypeError):
+            return None
+
     def _detect_doc_type_from_content(self, doc: dict) -> str:
         """Detect document type from the extracted markdown/content when classification is missing."""
         try:
             filename = doc.get("filename", "")
 
             # Check if HeadshotAnalyzer result is available
-            headshot_data = doc.get("headshot_analysis", {})
-            if headshot_data:
-                # Parse HeadshotAnalyzer fields
-                try:
-                    contents = headshot_data.get("result", {}).get("contents", [])
-                    if contents:
-                        fields = contents[0].get("fields", {})
-                        is_headshot = fields.get("isHeadshot", {}).get("valueBoolean", False)
-                        if is_headshot:
-                            return "Fotos 2x2 de Farmacéuticos"
-                except (KeyError, IndexError, TypeError):
-                    pass
+            headshot_verdict = self._get_headshot_verdict(doc)
+            if headshot_verdict is not None and headshot_verdict[0]:
+                return "Fotos 2x2 de Farmacéuticos"
 
             contents = doc.get("details", {}).get("result", {}).get("contents", [])
             if not contents:

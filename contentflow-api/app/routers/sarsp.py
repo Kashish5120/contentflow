@@ -190,11 +190,18 @@ def _load_report(
     if isinstance(execution.configuration, dict):
         execution_case_prefix = str(execution.configuration.get("case_prefix") or "").strip()
     if execution_case_prefix:
+        direct_blob = f"{execution_case_prefix.rstrip('/')}/results.json"
+        try:
+            report = _download_json_blob(results_account_name, results_container_name, direct_blob)
+            if report:
+                return report
+        except Exception:
+            logger.debug("Result blob not available at '%s'", direct_blob)
+
         try:
             blob_client = _get_blob_service_client(results_account_name)
             container_client = blob_client.get_container_client(results_container_name)
-            blobs = list(islice(container_client.list_blobs(name_starts_with=execution_case_prefix), 40))
-            for blob in blobs:
+            for blob in container_client.list_blobs(name_starts_with=execution_case_prefix):
                 if blob.name.lower().endswith("results.json"):
                     report = _download_json_blob(results_account_name, results_container_name, blob.name)
                     if report:
@@ -211,11 +218,18 @@ def _load_report(
         logger.debug("Result blob not available at template path '%s'", rendered_blob)
 
     rendered_prefix = _render_template(results_prefix_template, case_id=case_id, execution_id=execution_id)
+    direct_prefixed_blob = f"{rendered_prefix.rstrip('/')}/results.json"
+    try:
+        report = _download_json_blob(results_account_name, results_container_name, direct_prefixed_blob)
+        if report:
+            return report
+    except Exception:
+        logger.debug("Result blob not available at '%s'", direct_prefixed_blob)
+
     try:
         blob_client = _get_blob_service_client(results_account_name)
         container_client = blob_client.get_container_client(results_container_name)
-        blobs = list(islice(container_client.list_blobs(name_starts_with=rendered_prefix), 40))
-        for blob in blobs:
+        for blob in container_client.list_blobs(name_starts_with=rendered_prefix):
             if blob.name.lower().endswith("results.json"):
                 report = _download_json_blob(results_account_name, results_container_name, blob.name)
                 if report:
